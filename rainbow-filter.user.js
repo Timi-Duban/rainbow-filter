@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rainbow Filter
 // @namespace    https://github.com/Timi-Duban/rainbow-filter
-// @version      3.1.0
+// @version      3.2.0
 // @description  Filtre les résultats de recherche par combinaisons de couleurs (ET), avec nuances configurables.
 // @homepageURL  https://github.com/Timi-Duban/rainbow-filter
 // @updateURL    https://raw.githubusercontent.com/Timi-Duban/rainbow-filter/main/rainbow-filter.user.js
@@ -142,6 +142,7 @@
     .vr *{box-sizing:border-box}
     .vr button{font:inherit;color:inherit;background:none;border:none;padding:0;cursor:pointer}
     .vr-tab{right:0;top:50%;transform:translateY(-50%);width:64px;border-radius:12px 0 0 12px;padding:10px 6px 12px;text-align:center;box-shadow:-4px 0 18px rgba(0,0,0,.3);cursor:pointer;overflow:hidden}
+    .vr-tab.mini{width:36px;padding:8px 0;font-size:18px;line-height:1;opacity:.85}
     .vr-tab .found{font-size:22px;font-weight:700;line-height:1.1;margin-top:6px}
     .vr-tab small{display:block;color:#aaa;font-size:10px}
     .vr-drawer{right:0;top:0;bottom:0;width:340px;box-shadow:-6px 0 24px rgba(0,0,0,.3);overflow:auto}
@@ -284,10 +285,16 @@
   setInterval(() => { if (paused) renderStatus(); }, 1000);
 
   const renderTab = () => {
+    panel.onclick = () => setOpen(true);
+    if (!settings.enabled) {
+      panel.className = 'vr vr-tab mini';
+      panel.title = 'Rainbow Filter (désactivé)';
+      panel.replaceChildren('🌈');
+      return;
+    }
     panel.className = 'vr vr-tab';
     panel.title = 'Ouvrir Rainbow Filter';
     panel.replaceChildren(h('div', {}, '🌈'), stat.tabFound, stat.tabLabel, h('div', { className: 'vr-pb' }, stat.tabBar), stat.tabCount, stat.tabDot);
-    panel.onclick = () => setOpen(true);
   };
 
   const renderDrawer = () => {
@@ -377,9 +384,11 @@
 
   const renderPanel = () => { (open ? renderDrawer : renderTab)(); renderStatus(); };
 
+  const onSearchPage = () => location.pathname.startsWith('/catalog');
+
   const applyFilter = () => {
     const combos = activeCombos();
-    const active = settings.enabled && combos.length > 0;
+    const active = onSearchPage() && settings.enabled && combos.length > 0;
     let shown = 0, analysed = 0, total = 0;
 
     for (const card of /** @type {NodeListOf<HTMLElement>} */ (document.querySelectorAll(CARD_SELECTOR))) {
@@ -402,8 +411,10 @@
   };
 
   const scan = () => {
-    panel.style.display = location.pathname.startsWith('/catalog') ? '' : 'none';
-    if (settings.enabled && activeCombos().length) {
+    const search = onSearchPage();
+    panel.style.display = search ? '' : 'none';
+    if (!search) queue.clear();
+    else if (settings.enabled && activeCombos().length) {
       for (const card of document.querySelectorAll(CARD_SELECTOR)) {
         const item = itemOf(/** @type {HTMLElement} */ (card));
         if (item && !cache[item.id] && !queue.has(item.id)) queue.set(item.id, { url: item.url });
