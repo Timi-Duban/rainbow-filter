@@ -17,7 +17,7 @@ Sur une page de recherche, un onglet 🌈 sur le bord droit affiche le nombre d'
 - **Combinaisons** : un article est affiché s'il a toutes les couleurs d'*au moins une* combinaison (2 couleurs max : un vendeur en renseigne au plus 2). Les grilles Couleur 1 × Couleur 2 créent toutes les paires : {Rouge, Bordeaux} × {Vert, Jaune} = 4 combinaisons. Entrée ajoute. Sans combinaison, les 2 couleurs cochées sur le site servent de combinaison.
 - **Inclure les nuances** : une couleur accepte aussi ses nuances (Bleu → Bleu clair, Marine, Turquoise…). « Modifier » permet de les changer pour chaque couleur.
 
-Réglages enregistrés dans le navigateur (localStorage), propres à chaque ordinateur.
+Chaque nouvel onglet repart de zéro : filtre désactivé, aucune combinaison. Ajouter une combinaison active le filtre ; un rechargement de l'onglet le conserve. Seuls les réglages de nuances sont mémorisés (dans le navigateur, propres à chaque ordinateur).
 
 ## Limites
 

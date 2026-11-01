@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Rainbow Filter
 // @namespace    https://github.com/Timi-Duban/rainbow-filter
-// @version      3.2.0
+// @version      3.3.0
 // @description  Filtre les résultats de recherche par combinaisons de couleurs (ET), avec nuances configurables.
 // @homepageURL  https://github.com/Timi-Duban/rainbow-filter
 // @updateURL    https://raw.githubusercontent.com/Timi-Duban/rainbow-filter/main/rainbow-filter.user.js
@@ -22,6 +22,7 @@
   const BACKOFF_MS = 60_000;
   const CACHE_KEY = 'vinted-rainbow:colors';
   const SETTINGS_KEY = 'vinted-rainbow:settings';
+  const TAB_KEY = 'vinted-rainbow:tab';
   const CHIP_SELECTOR = '[data-testid^="catalog--selected-filter-colorIds-"][data-testid$="--text"]';
   const CARD_SELECTOR = '[data-testid="grid-item"]';
   // Sellers can pick at most 2 colors, so a 3-color combination never matches
@@ -49,11 +50,21 @@
    * @typedef {{ enabled: boolean, shades: boolean, combos: string[][], shadeMap: Record<string, string[]> }} Settings
    */
 
+  // Shade preferences persist across tabs; the filter itself (enabled, combos) lives per tab and starts off
   /** @type {Settings} */
-  const settings = { enabled: true, shades: false, combos: [], shadeMap: structuredClone(DEFAULT_SHADES) };
-  try { Object.assign(settings, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); } catch { /* blocked storage */ }
+  const settings = { enabled: false, shades: false, combos: [], shadeMap: structuredClone(DEFAULT_SHADES) };
+  try {
+    const { shades = false, shadeMap = settings.shadeMap } = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    const { enabled = false, combos = [] } = JSON.parse(sessionStorage.getItem(TAB_KEY) || '{}');
+    Object.assign(settings, { shades, shadeMap, enabled, combos });
+  } catch { /* blocked storage */ }
   settings.combos = settings.combos.filter((combo) => combo.length <= MAX_ITEM_COLORS);
-  const saveSettings = () => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* blocked storage */ } };
+  const saveSettings = () => {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ shades: settings.shades, shadeMap: settings.shadeMap }));
+      sessionStorage.setItem(TAB_KEY, JSON.stringify({ enabled: settings.enabled, combos: settings.combos }));
+    } catch { /* blocked storage */ }
+  };
 
   // --- Cache (memoization): itemId -> color labels, kept for the tab session ---
   /** @type {Record<string, string[]>} */
@@ -208,7 +219,7 @@
 
   // --- UI state (not persisted): drawer open, builder selections, shade editor ---
   let open = false;
-  const first = new Set(vintedColors().slice(0, 1));
+  const first = new Set();
   const second = new Set();
   /** @type {string | null | undefined} undefined = shade editor closed, null = open with no color picked */
   let shadeColor;
@@ -238,6 +249,7 @@
     const combos = draftCombos();
     if (!combos.length) return;
     settings.combos.push(...combos);
+    settings.enabled = true; // adding is an explicit request to filter
     first.clear();
     second.clear();
     update();
